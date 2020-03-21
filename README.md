@@ -26,6 +26,7 @@ mailtojson_autoreply: "|/nethosting/mailtojson/mailtojson.py -c /nethosting/mail
     "clientSecret": "XxXxXxXxXxXxXxXxXxXxXx.."
   }
 }
+```
 
 ## JSON Format
 
