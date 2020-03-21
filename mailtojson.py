@@ -13,6 +13,8 @@ ERROR_NOUSER = 67
 ERROR_PERM_DENIED = 77
 ERROR_TEMP_FAIL = 75
 
+USER_AGENT = "NewsmanApp/MailToJson %s - https://github.com/Newsman/MailToJson" % VERSION
+
 # regular expresion from https://github.com/django/django/blob/master/django/core/validators.py
 email_re = re.compile(
     r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"  # dot-atom
@@ -229,7 +231,7 @@ class MailJson:
             if content_disposition:
                 # we have attachment
                 filename = "undefined"
-                
+
                 r = filename_re.findall(content_disposition)
                 if r:
                     filename = sorted(r[0])[1]
@@ -263,16 +265,39 @@ class MailJson:
     def get_raw_parts(self):
         return self.raw_parts
 
+def get_oauth_token(options):
+
+    token_url = options["tokenUrl"].replace("\n", "").replace("\r", "")
+    credentials = "%s:%s" % (options["clientId"], options["clientSecret"])
+    encode_credential = base64.b64encode(credentials.encode('utf-8')).decode('utf-8').replace("\n", "")
+
+    headers = {
+        "User-Agent": "%s" % USER_AGENT,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "Authorization": ("Basic %s" % encode_credential)
+    }
+
+    if "headers" in options:
+        headers.update(options["headers"])
+
+    body = "grant_type=client_credentials"
+
+    request = urllib2.Request(token_url, body, headers)
+    response = json.loads(urllib2.urlopen(request).read())
+
+    return "%s %s" % (response["token_type"], response["access_token"])
+
 if __name__ == "__main__":
     usage = "usage: %prog [options]"
     parser = OptionParser(usage)
-    parser.add_option("-u", "--url", dest = "url", action = "store", help = "the url where to post the mail data as json")
+    parser.add_option("-c", "--conf-file", dest = "conf_file", action = "store", help = "the configuration file to use")
     parser.add_option("-p", "--print", dest = "do_print", action = "store_true", help = "no json posting, just print the data")
     parser.add_option("-d", "--dump", dest = "do_dump", action = "store_true", help = "if present print to output the url post response")
 
     opt, args = parser.parse_args()
 
-    if not opt.url and not opt.do_print:
+    if not opt.conf_file and not opt.do_print:
         print parser.format_help()
         sys.exit(1)
 
@@ -286,14 +311,45 @@ if __name__ == "__main__":
         if opt.do_print:
             print(json.dumps(data, encoding = data.get("encoding")))
         else:
-            headers = { "Content-Type": "application/json; charset=%s" % data.get("encoding"), "User-Agent": "NewsmanApp/MailToJson %s - https://github.com/Newsman/MailToJson" % VERSION }
-            req = urllib2.Request(opt.url.replace("\n", "").replace("\r", ""), json.dumps(data, encoding = data.get("encoding")), headers)
+
+            # Load configuration
+            with open(opt.conf_file) as json_data_file:
+                config = json.load(json_data_file)
+
+            # Check that mail URL exists in configuration file
+            if not "mailUrl" in config:
+                raise Exception("Key mailUrl missing from configuration file %s\n" % opt.conf_file)
+
+            mail_url = config["mailUrl"].replace("\n", "").replace("\r", "")
+
+            # Set request headers
+            headers = {
+                "User-Agent": "%s" % USER_AGENT,
+                "Content-Type": "application/json; charset=%s" % data.get("encoding")
+            }
+
+            # If configuration file contains oauth details
+            if "oauth" in config:
+                # Get client token and append request headers
+                token = get_oauth_token(config["oauth"])
+
+                authorization = {
+                    "Authorization": "%s" % token
+                }
+                headers.update(authorization)
+
+            # Add extra request headers from configuration file 
+            if "headers" in config:
+                headers.update(config["headers"])
+
+            req = urllib2.Request(mail_url, json.dumps(data, encoding = data.get("encoding")), headers)
             resp = urllib2.urlopen(req)
             ret = resp.read()
 
-            print "Parsed Mail Data sent to: %s\n" % opt.url
+            print "Parsed Mail Data sent to: %s\n" % mail_url
             if opt.do_dump:
                 print ret
+
     except Exception, inst:
-        print "ERR: %s" % inst
+        print "ERR: %s\n" % inst
         sys.exit(ERROR_TEMP_FAIL)

@@ -1,0 +1,8 @@
+{
+  "mailUrl": "https://localhost:8080/ords/apps/mail/receive",
+  "oauth": {
+    "tokenUrl": "https://localhost:8080/ords/apps/oauth/token",
+    "clientId": "XxXxXxXxXxXxXxXxXxXxXx..",
+    "clientSecret": "XxXxXxXxXxXxXxXxXxXxXx.."
+  }
+}

@@ -5,17 +5,27 @@ Quick script to parse incoming mail and do a post with the content as JSON data.
 ## How to use
 
 The work flow is quite simple. The script reads the mail mime message from STDIN, parses
-the data and makes a POST call with RAW JSON to the url (passed as command line argument).
+the data and makes a POST call with RAW JSON to the url defined in configuration file.
 
 Example usage (command line):
 ```bash
-cat mail.eml | python mailtojson.py -u https://dev.url/autoreply/handle.php
+cat mail.eml | python mailtojson.py -c exampleconf.json
 ```
 
 Example usage (postfix aliases):
 ```bash
-mailtojson_autoreply: "|/nethosting/mailtojson/mailtojson.py -u https://dev.url/autoreply/handle.php"
+mailtojson_autoreply: "|/nethosting/mailtojson/mailtojson.py -c /nethosting/mailtojson/exampleconf.json"
 ```
+## Configuration File format
+```json
+{
+  "mailUrl": "https://localhost:8080/ords/apps/mail/receive",
+  "oauth": {
+    "tokenUrl": "https://localhost:8080/ords/apps/oauth/token",
+    "clientId": "XxXxXxXxXxXxXxXxXxXxXx..",
+    "clientSecret": "XxXxXxXxXxXxXxXxXxXxXx.."
+  }
+}
 
 ## JSON Format
 
