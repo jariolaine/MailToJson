@@ -275,7 +275,7 @@ def get_oauth_token(options):
         "User-Agent": "%s" % USER_AGENT,
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json",
-        "Authorization": ("Basic %s" % encode_credential)
+        "Authorization": "Basic %s" % encode_credential
     }
 
     if "headers" in options:
@@ -291,13 +291,14 @@ def get_oauth_token(options):
 if __name__ == "__main__":
     usage = "usage: %prog [options]"
     parser = OptionParser(usage)
+    parser.add_option("-u", "--url", dest = "url", action = "store", help = "the url where to post the mail data as json")
     parser.add_option("-c", "--conf-file", dest = "conf_file", action = "store", help = "the configuration file to use")
     parser.add_option("-p", "--print", dest = "do_print", action = "store_true", help = "no json posting, just print the data")
     parser.add_option("-d", "--dump", dest = "do_dump", action = "store_true", help = "if present print to output the url post response")
 
     opt, args = parser.parse_args()
 
-    if not opt.conf_file and not opt.do_print:
+    if not opt.url and not opt.conf_file and not opt.do_print:
         print parser.format_help()
         sys.exit(1)
 
@@ -312,36 +313,45 @@ if __name__ == "__main__":
             print(json.dumps(data, encoding = data.get("encoding")))
         else:
 
-            # Load configuration
-            with open(opt.conf_file) as json_data_file:
-                config = json.load(json_data_file)
-
-            # Check that mail URL exists in configuration file
-            if not "mailUrl" in config:
-                raise Exception("Key mailUrl missing from configuration file %s\n" % opt.conf_file)
-
-            mail_url = config["mailUrl"].replace("\n", "").replace("\r", "")
-
-            # Set request headers
+            # Set default request headers
             headers = {
                 "User-Agent": "%s" % USER_AGENT,
                 "Content-Type": "application/json; charset=%s" % data.get("encoding")
             }
 
-            # If configuration file contains oauth details
-            if "oauth" in config:
-                # Get client token and append request headers
-                token = get_oauth_token(config["oauth"])
+            # Load configuration file if passed as option
+            if opt.conf_file:
+                with open(opt.conf_file) as json_data_file:
+                    config = json.load(json_data_file)
 
-                authorization = {
-                    "Authorization": "%s" % token
-                }
-                headers.update(authorization)
+                # If URL is not passed as option, use URL from configuration file
+                if opt.url:
+                    mail_url = opt.url
+                else:
+                    # Check that mail URL exists in configuration file
+                    if not "mailUrl" in config:
+                        raise Exception("Key mailUrl missing from configuration file %s\n" % opt.conf_file)
 
-            # Add extra request headers from configuration file 
-            if "headers" in config:
-                headers.update(config["headers"])
+                    mail_url = config["mailUrl"]
 
+                # If configuration file contains oauth details
+                if "oauth" in config:
+                    # Get client token and append request headers
+                    token = get_oauth_token(config["oauth"])
+
+                    authorization = {
+                        "Authorization": "%s" % token
+                    }
+                    
+                    headers.update(authorization)
+
+                # Add extra request headers from configuration file
+                if "headers" in config:
+                    headers.update(config["headers"])
+
+            mail_url = mail_url.replace("\n", "").replace("\r", "")
+
+            # Post JSON
             req = urllib2.Request(mail_url, json.dumps(data, encoding = data.get("encoding")), headers)
             resp = urllib2.urlopen(req)
             ret = resp.read()
