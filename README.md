@@ -23,7 +23,7 @@ mailtojson_autoreply: "|/nethosting/mailtojson/mailtojson.py -u https://dev.url/
 ```
 ## Configuration File
 
-Configuration file is in JSON format and contains details for URL and OAuth details
+Configuration file is in JSON format and contains details for URL and OAuth.
 ```json
 {
   "mailUrl": "https://localhost:8080/ords/ws/mail/receive",
