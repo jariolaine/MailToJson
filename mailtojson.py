@@ -7,7 +7,7 @@
 import sys, urllib2, email, re, csv, StringIO, base64, json, datetime, pprint
 from optparse import OptionParser
 
-VERSION = "1.3.1"
+VERSION = "1.3.2"
 
 ERROR_NOUSER = 67
 ERROR_PERM_DENIED = 77
@@ -342,7 +342,7 @@ if __name__ == "__main__":
                     authorization = {
                         "Authorization": "%s" % token
                     }
-                    
+
                     headers.update(authorization)
 
                 # Add extra request headers from configuration file
@@ -356,10 +356,10 @@ if __name__ == "__main__":
             resp = urllib2.urlopen(req)
             ret = resp.read()
 
-            print "Parsed Mail Data sent to: %s\n" % mail_url
+            print "Return code %s. Parsed Mail Data sent to: %s\n" % (resp.getcode(), mail_url)
             if opt.do_dump:
                 print ret
 
     except Exception, inst:
-        print "ERR: %s\n" % inst
+        print "ERR: %s" % inst
         sys.exit(ERROR_TEMP_FAIL)
